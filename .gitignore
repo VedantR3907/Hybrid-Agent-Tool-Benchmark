@@ -10,11 +10,12 @@ venv/
 .env
 
 # Benchmark outputs
-agent_benchmark/runs/
-agent_benchmark/workspace_data/.artifacts/
+runs/
+workspace_data/.artifacts/
 
 # OS/editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
+

@@ -1,0 +1,8 @@
+2026-03-01T09:55:00 service=api-gateway status=OK
+2026-03-01T09:57:00 service=billing-worker status=OK
+2026-03-01T09:59:30 service=cache-sync status=OK
+2026-03-01T10:01:00 service=billing-worker status=FAIL
+2026-03-01T10:02:00 service=billing-worker status=FAIL
+2026-03-01T10:03:00 service=billing-worker status=FAIL
+2026-03-01T10:04:00 service=cache-sync status=OK
+2026-03-01T10:05:00 service=billing-worker status=FAIL

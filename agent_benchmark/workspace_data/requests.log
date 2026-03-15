@@ -1,0 +1,7 @@
+2026-03-01T09:50:00 path=/api/orders/list latency_ms=210 status=200
+2026-03-01T09:51:00 path=/api/auth/session latency_ms=810 status=200
+2026-03-01T09:52:00 path=/api/payments/charge latency_ms=640 status=500
+2026-03-01T09:53:00 path=/api/reports/export latency_ms=910 status=200
+2026-03-01T09:54:00 path=/api/billing/retry latency_ms=870 status=502
+2026-03-01T09:55:00 path=/api/profile/view latency_ms=180 status=200
+2026-03-01T09:56:00 path=/api/inventory/search latency_ms=430 status=200

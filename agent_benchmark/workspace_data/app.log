@@ -1,0 +1,15 @@
+2026-03-12T09:00:01Z INFO Boot sequence started
+2026-03-12T09:00:02Z INFO Loading configuration from config.json
+2026-03-12T09:00:03Z WARN Cache warmup took longer than expected
+2026-03-12T09:01:10Z ERROR Failed to fetch customer profile for user 183
+2026-03-12T09:02:44Z INFO Retrying profile fetch
+2026-03-12T09:03:11Z ERROR Payment gateway timeout while creating invoice 9921
+2026-03-12T09:03:15Z INFO Invoice retry queued
+2026-03-12T09:04:27Z ERROR Worker crashed while processing queue billing-high
+2026-03-12T09:04:29Z WARN Worker recovered after supervisor restart
+2026-03-12T09:05:01Z ERROR Failed to connect to redis replica
+2026-03-12T09:05:14Z INFO Replica connection restored
+2026-03-12T09:06:33Z ERROR Timeout while calling shipping partner API
+2026-03-12T09:06:55Z INFO Shipping retry succeeded
+2026-03-12T09:07:42Z ERROR Failed to persist audit event for order 5518
+2026-03-12T09:08:00Z INFO Shutdown complete

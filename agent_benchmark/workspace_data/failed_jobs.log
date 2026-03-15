@@ -1,0 +1,5 @@
+2026-03-01T09:58:10 job_id=J101 reason=network
+2026-03-01T10:02:44 job_id=J102 reason=timeout
+2026-03-01T10:04:01 job_id=J104 reason=timeout
+2026-03-01T10:07:18 job_id=J105 reason=crash
+2026-03-01T10:08:30 job_id=J107 reason=timeout

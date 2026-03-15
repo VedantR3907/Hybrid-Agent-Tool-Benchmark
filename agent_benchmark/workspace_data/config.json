@@ -1,0 +1,9 @@
+{
+  "mode": "production",
+  "timeout": 45,
+  "retries": 5,
+  "feature_flags": {
+    "timeout_monitoring": true,
+    "beta_checkout": false
+  }
+}

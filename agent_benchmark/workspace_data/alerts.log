@@ -1,0 +1,3 @@
+2026-03-01T10:03:00 alert=billing-api-high-error-rate severity=critical
+2026-03-01T10:04:00 alert=billing-api-latency-p95 severity=critical
+2026-03-01T10:05:00 alert=worker-queue-depth severity=warning

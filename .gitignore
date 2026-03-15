@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Env files
+.env
+
+# Benchmark outputs
+agent_benchmark/runs/
+agent_benchmark/workspace_data/.artifacts/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

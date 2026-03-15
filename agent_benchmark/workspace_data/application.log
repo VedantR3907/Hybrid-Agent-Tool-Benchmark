@@ -1,0 +1,11 @@
+2026-03-01T09:50:00 INFO startup complete
+WARN code=W204 service=cache message=stale shard metadata
+WARN code=W301 service=worker message=slow downstream ack
+WARN code=W204 service=cache message=stale shard metadata
+WARN code=W110 service=auth message=missing device fingerprint
+WARN code=W204 service=cache message=stale shard metadata
+WARN code=W301 service=worker message=slow downstream ack
+WARN code=W204 service=cache message=stale shard metadata
+WARN code=W301 service=worker message=slow downstream ack
+WARN code=W204 service=cache message=stale shard metadata
+WARN code=W110 service=auth message=missing device fingerprint

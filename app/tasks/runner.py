@@ -16,7 +16,7 @@ from app.logger import RunLogger, write_summary
 from app.models import AgentRunResult, BenchmarkTask
 from app.ollama_client import OllamaClient
 from app.tasks.hybrid_tasks import SUITE_NAME, get_tasks
-from app.tasks.runner_helpers import aggregate_metrics
+from app.tasks.runner_helpers import aggregate_by_model_agent, aggregate_metrics
 from app.tools.hybrid_tools import HybridCliToolSuite, HybridFunctionToolSuite
 from app.workspace import WorkspaceManager
 from app.workspace.setup_workspace import create_workspace
@@ -29,6 +29,7 @@ console = Console()
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the hybrid benchmark.")
     parser.add_argument("--agent", choices=["function", "cli", "both"], default="both")
+    parser.add_argument("--models", help="Comma-separated Ollama model names; overrides OLLAMA_MODELS/OLLAMA_MODEL.")
     parser.add_argument("--tasks", nargs="*", help="Optional task ids to run.")
     parser.add_argument("--task-range", help="Optional 1-based inclusive task range like 2-4.")
     parser.add_argument("--rebuild-workspace", action="store_true", help="Recreate deterministic workspace files before running.")
@@ -103,16 +104,17 @@ def print_run_table(results: list[AgentRunResult]) -> None:
 
 
 def print_comparison_table(results: list[AgentRunResult]) -> None:
-    by_task: dict[str, dict[str, AgentRunResult]] = {}
+    by_task: dict[tuple[str, str], dict[str, AgentRunResult]] = {}
     for result in results:
-        by_task.setdefault(result.task_id, {})[result.agent_type] = result
+        by_task.setdefault((result.model_name, result.task_id), {})[result.agent_type] = result
 
     table = Table(title="Task Comparison")
+    table.add_column("Model")
     table.add_column("Task")
     table.add_column("Function Agent")
     table.add_column("CLI Agent")
     table.add_column("Notes")
-    for task_id, entries in by_task.items():
+    for (model_name, task_id), entries in by_task.items():
         function_result = entries.get("function")
         cli_result = entries.get("cli")
         function_label = "-"
@@ -130,7 +132,7 @@ def print_comparison_table(results: list[AgentRunResult]) -> None:
                 f"({cli_result.tool_calls} tools, {cli_result.llm_turns} turns, {cli_result.total_tokens} tok)"
             )
             notes.append(f"cli: {cli_result.validation_notes}")
-        table.add_row(task_id, function_label, cli_label, " | ".join(notes))
+        table.add_row(model_name, task_id, function_label, cli_label, " | ".join(notes))
     console.print(table)
 
 
@@ -162,6 +164,32 @@ def print_aggregate_table(results: list[AgentRunResult]) -> dict[str, dict[str, 
 
 
 
+def print_model_table(by_model: dict[str, dict[str, dict[str, float]]]) -> None:
+    table = Table(title="Per-Model x Agent Aggregates")
+    table.add_column("Model")
+    table.add_column("Agent")
+    table.add_column("Runs")
+    table.add_column("Success Rate")
+    table.add_column("Avg Tool Calls")
+    table.add_column("Avg LLM Turns")
+    table.add_column("Avg Tokens")
+    table.add_column("Avg Elapsed (ms)")
+    for model_name, by_agent in by_model.items():
+        for agent_type, metrics in by_agent.items():
+            table.add_row(
+                model_name,
+                agent_type,
+                str(int(metrics["runs"])),
+                f"{metrics['success_rate']:.2%}",
+                f"{metrics['avg_tool_calls']:.2f}",
+                f"{metrics['avg_llm_turns']:.2f}",
+                f"{metrics['avg_total_tokens']:.2f}",
+                f"{metrics['avg_elapsed_ms']:.2f}",
+            )
+    console.print(table)
+
+
+
 def main() -> None:
     args = parse_args()
     config = BenchmarkConfig.load()
@@ -173,44 +201,73 @@ def main() -> None:
     tasks = select_tasks(get_tasks(), args.tasks, args.task_range)
     client = OllamaClient(config)
 
-    results: list[AgentRunResult] = []
-    for task in tasks:
-        agents = build_agents(client, config, workspace, args.agent)
-        for agent in agents:
-            logger = RunLogger(
-                config.runs_root,
-                task.task_id,
-                agent.agent_type,
-                config.ollama_model,
-                console=console,
-                stream_transcript=not args.no_transcript,
-            )
-            logger.start_task(task.prompt, task.notes)
-            result = agent.run_task(task, logger)
-            json_log_path, transcript_path = logger.finalize(
-                {
-                    "task_prompt": task.prompt,
-                    "task_notes": task.notes,
-                    "task_suite": SUITE_NAME,
-                    "result": asdict(result),
-                }
-            )
-            result.log_path = str(json_log_path)
-            result.transcript_path = str(transcript_path)
-            results.append(result)
+    if args.models:
+        models = [m.strip() for m in args.models.split(",") if m.strip()]
+    elif config.ollama_models:
+        models = list(config.ollama_models)
+    else:
+        models = [config.ollama_model]
 
-    print_run_table(results)
-    print_comparison_table(results)
-    aggregates = print_aggregate_table(results)
+    results: list[AgentRunResult] = []
+    skipped_models: list[tuple[str, str]] = []
+    for model_name in models:
+        config.ollama_model = model_name
+        console.rule(f"model: {model_name}")
+        try:
+            for task in tasks:
+                agents = build_agents(client, config, workspace, args.agent)
+                for agent in agents:
+                    logger = RunLogger(
+                        config.runs_root,
+                        task.task_id,
+                        agent.agent_type,
+                        config.ollama_model,
+                        console=console,
+                        stream_transcript=not args.no_transcript,
+                    )
+                    logger.start_task(task.prompt, task.notes)
+                    result = agent.run_task(task, logger)
+                    json_log_path, transcript_path = logger.finalize(
+                        {
+                            "task_prompt": task.prompt,
+                            "task_notes": task.notes,
+                            "task_suite": SUITE_NAME,
+                            "result": asdict(result),
+                        }
+                    )
+                    result.log_path = str(json_log_path)
+                    result.transcript_path = str(transcript_path)
+                    results.append(result)
+        except Exception as exc:
+            reason = f"{type(exc).__name__}: {exc}"
+            console.print(f"[yellow]model {model_name} aborted: {reason}. continuing to next model.[/yellow]")
+            skipped_models.append((model_name, reason))
+
+    if results:
+        print_run_table(results)
+        print_comparison_table(results)
+        aggregates = print_aggregate_table(results)
+    else:
+        aggregates = {}
+        console.print("[red]No results to report (all models failed).[/red]")
+    by_model = aggregate_by_model_agent(results)
+    if len(models) > 1 and results:
+        print_model_table(by_model)
 
     summary_payload = {
-        "model_name": config.ollama_model,
+        "models": models,
+        "skipped_models": [{"model": m, "reason": r} for m, r in skipped_models],
         "base_url": config.ollama_base_url,
         "suite": SUITE_NAME,
         "task_range": args.task_range,
         "results": [asdict(result) for result in results],
         "aggregates": aggregates,
+        "aggregates_by_model": by_model,
     }
+    if skipped_models:
+        console.print("\n[yellow]Skipped models:[/yellow]")
+        for model_name, reason in skipped_models:
+            console.print(f"  - {model_name}: {reason}")
     summary_path = config.runs_root / "latest-summary.json"
     write_summary(summary_path, summary_payload)
     console.print(f"\nSummary written to {summary_path}")

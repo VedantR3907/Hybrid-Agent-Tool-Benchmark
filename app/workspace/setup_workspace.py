@@ -241,6 +241,168 @@ The likely cause is connection pool exhaustion introduced by the new billing-api
 Operations mitigated by reducing background reconciliation load.
 """
 
+EXPENSES_CSV = """date,category,vendor,amount
+2026-03-01,groceries,SuperMart,84.50
+2026-03-02,transport,UberX,18.75
+2026-03-03,dining,The Bistro,62.00
+2026-03-05,groceries,SuperMart,55.20
+2026-03-07,utilities,PowerCo,142.30
+2026-03-10,dining,Pizza Place,28.00
+2026-03-12,transport,UberX,22.40
+2026-03-15,groceries,FarmFresh,73.10
+2026-03-18,subscriptions,StreamCo,15.99
+2026-03-20,dining,The Bistro,55.50
+2026-03-22,transport,Taxi,31.00
+2026-03-25,utilities,WaterCorp,48.00
+"""
+
+TICKETS_CSV = """ticket_id,customer,opened_at,status,priority,category
+T001,Alice,2026-03-01,closed,low,billing
+T002,Bob,2026-03-02,open,high,bug
+T003,Alice,2026-03-03,open,medium,question
+T004,Carol,2026-03-04,closed,low,billing
+T005,Bob,2026-03-05,open,high,bug
+T006,Derek,2026-03-06,closed,medium,feature_request
+T007,Alice,2026-03-07,open,low,question
+T008,Bob,2026-03-08,closed,high,bug
+T009,Eva,2026-03-09,open,medium,bug
+T010,Alice,2026-03-10,closed,low,billing
+"""
+
+EMPLOYEES_CSV = """employee_id,name,manager_id
+1,Sarah CEO,
+2,Mark VP Eng,1
+3,Lisa VP Sales,1
+4,Tom Eng Mgr,2
+5,Jen Eng Mgr,2
+6,Raj Engineer,4
+7,Mei Engineer,4
+8,Ben Engineer,5
+9,Pat Sales Rep,3
+10,Quinn Sales Rep,3
+"""
+
+MEETINGS_CSV = """date,start,end,attendees,title
+2026-03-01,09:00,10:00,"alice,bob",Standup
+2026-03-01,10:00,11:00,"alice,carol",Design Review
+2026-03-01,14:00,15:00,"bob,derek",1:1
+2026-03-02,09:00,10:00,"alice,bob",Standup
+2026-03-02,11:00,12:30,"alice,carol,bob",Planning
+2026-03-02,12:00,13:00,"alice,eva",Lunch Sync
+2026-03-03,09:00,10:00,"alice,bob",Standup
+"""
+
+MEETING_MINUTES_MD = """# Q1 Planning Meeting
+
+**Date:** 2026-03-15
+**Facilitator:** Sarah Chen
+**Attendees:** Mark, Lisa, Tom, Jen
+
+## Discussion
+We reviewed Q1 progress against the OKRs. Engineering velocity is on track.
+Sales pipeline is 20% above forecast. Marketing needs additional headcount.
+
+## Decisions
+- Approved hiring two additional marketing specialists.
+- Postponed the API v2 migration to Q2.
+
+## Action Items
+1. Mark to draft the marketing job postings by 2026-03-20.
+2. Lisa to share the updated sales forecast by 2026-03-18.
+3. Tom to prepare the Q2 API migration plan by 2026-04-01.
+"""
+
+PANTRY_CSV = """item,quantity
+flour,500
+sugar,300
+eggs,6
+butter,250
+milk,1000
+salt,100
+yeast,0
+chocolate,150
+"""
+
+RECIPE_MD = """# Chocolate Cake
+
+Servings: 8
+
+## Ingredients
+- flour: 300g
+- sugar: 250g
+- eggs: 3
+- butter: 200g
+- cocoa: 50g
+- milk: 200ml
+
+## Steps
+1. Mix dry ingredients.
+2. Add wet ingredients and combine.
+3. Bake at 180C for 35 minutes.
+"""
+
+DISTANCES_CSV = """from,to,miles
+NYC,Boston,215
+NYC,Philadelphia,95
+Philadelphia,Washington,140
+Boston,Portland,110
+Washington,Atlanta,640
+Atlanta,Miami,660
+NYC,Chicago,790
+Chicago,Detroit,280
+Detroit,Cleveland,170
+Cleveland,Pittsburgh,135
+"""
+
+INBOX_MD = """---
+From: boss@company.com
+Subject: URGENT: budget review
+Priority: urgent
+Date: 2026-03-15
+
+Need the Q1 budget breakdown by EOD today. This is blocking the board prep.
+
+---
+From: hr@company.com
+Subject: Annual benefits enrollment
+Priority: normal
+Date: 2026-03-14
+
+Open enrollment for benefits closes April 15. No immediate action needed.
+
+---
+From: client@acme.com
+Subject: URGENT: production outage
+Priority: urgent
+Date: 2026-03-15
+
+Our payment processing is down. Please respond ASAP.
+
+---
+From: newsletter@techweekly.com
+Subject: This week in tech
+Priority: low
+Date: 2026-03-13
+
+Weekly digest enclosed.
+
+---
+From: vendor@supplies.com
+Subject: Invoice #4421 due
+Priority: normal
+Date: 2026-03-14
+
+Reminder: invoice due in 7 days.
+
+---
+From: client@acme.com
+Subject: Follow-up on production outage
+Priority: urgent
+Date: 2026-03-16
+
+Status update on the payment issue?
+"""
+
 PNG_1X1_BASE64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO"
     "QnK3sAAAAASUVORK5CYII="
@@ -313,6 +475,15 @@ def create_workspace(root: Path, force: bool = False) -> None:
         root / "incident_notes.md": INCIDENT_NOTES_MD,
         root / "alerts.log": ALERTS_LOG,
         root / "deployments.log": DEPLOYMENTS_LOG,
+        root / "expenses.csv": EXPENSES_CSV,
+        root / "tickets.csv": TICKETS_CSV,
+        root / "employees.csv": EMPLOYEES_CSV,
+        root / "meetings.csv": MEETINGS_CSV,
+        root / "meeting_minutes.md": MEETING_MINUTES_MD,
+        root / "pantry.csv": PANTRY_CSV,
+        root / "recipe.md": RECIPE_MD,
+        root / "distances.csv": DISTANCES_CSV,
+        root / "inbox.md": INBOX_MD,
         root / "configs" / "prod.env": PROD_ENV,
         root / "configs" / "staging.env": STAGING_ENV,
         root / "src" / "main.py": MAIN_PY,

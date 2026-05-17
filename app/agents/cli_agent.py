@@ -14,7 +14,9 @@ class CliAgent(BaseAgent):
     def system_prompt(self) -> str:
         return (
             "You are the CLI benchmark agent. You have exactly one tool: run_command(command). "
-            "Use it like a strong workspace-scoped PowerShell primitive. Prefer one expressive command over many tiny steps when that is reliable. "
+            "The command is already executed inside PowerShell, so write the PowerShell command directly. "
+            "Do NOT wrap it in 'powershell -NoProfile -Command \"...\"' or 'pwsh -c ...' — that spawns a nested process and may time out. "
+            "Use it like a strong workspace-scoped PowerShell primitive.Prefer one expressive command over many tiny steps when that is reliable. "
             "For CSV or tabular tasks, prefer Import-Csv with Where-Object, Select-Object, Sort-Object, Measure-Object, Group-Object, and simple calculations rather than loading the whole file into context. "
             "For long text files, use exact string search first with Select-String -SimpleMatch or read targeted ranges with Get-Content | Select-Object -Skip N -First M instead of broad semantic grep loops. "
             "If a large file preview comes back, move systematically through ranges rather than repeating fuzzy searches. "

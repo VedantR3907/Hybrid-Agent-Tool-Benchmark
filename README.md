@@ -49,12 +49,47 @@ This is scoped for local benchmark use. It is not a hardened OS sandbox.
 
 ## Benchmark tasks
 
-The benchmark currently runs four focused tasks:
+32 tasks across three difficulty levels, spanning both engineering and non-engineering agent work.
 
-1. `focus_long_log_check`
-2. `focus_deep_markdown_lookup`
-3. `focus_csv_highest_value`
-4. `focus_csv_comparison`
+**Easy** (single file, one fact)
+- `easy_config_lookup` — read two values from `config.json`
+- `easy_count_app_errors` — count ERROR lines in `app.log`
+- `easy_find_billing_api_files` — find which files contain the string `billing-api`
+- `easy_list_csv_files` — list all `.csv` files in the workspace root
+
+**Medium** (filter, aggregate, dedupe, sort)
+- `focus_long_log_check` — count `database connection failed` errors in `huge.log`
+- `medium_top_failure_reason` — most frequent failure reason in `failed_jobs.log`
+- `medium_top_500_endpoint` — endpoint with the most HTTP 500s in `server.log`
+- `medium_unique_customers` — distinct customer names in `customers.csv`
+- `medium_top_revenue_country` — highest total revenue country in `sales.csv`
+
+**Hard** (cross-file or deep-scan reasoning)
+- `focus_deep_markdown_lookup` — find an env var deep inside a long markdown file
+- `focus_csv_highest_value` — filter+max over a 5MB+ CSV
+- `focus_csv_comparison` — compare two rows in a large CSV
+- `hard_prod_staging_feature_diff` — find the one feature flag that differs between `configs/prod.env` and `configs/staging.env`
+- `hard_incident_root_cause` — correlate `incident_notes.md` with `deployments.log`
+- `hard_env_var_mismatch` — find an env var read by `src/cache.py` but missing from `configs/prod.env`
+- `hard_correlated_alerts` — correlate `alerts.log` with `timeline.log`
+
+**Non-engineering domains** (added to test broader agent work)
+
+*Personal finance* — `finance_total_spend`, `finance_top_category` (over `expenses.csv`)
+
+*Customer support* — `support_open_ticket_count`, `support_top_customer` (over `tickets.csv`)
+
+*HR / org chart* — `hr_direct_reports_mark`, `hr_no_manager` (over `employees.csv`)
+
+*Scheduling* — `meetings_count_on_march_02`, `meetings_double_booked` (over `meetings.csv`)
+
+*Document summarization* — `minutes_facilitator`, `minutes_action_owners` (over `meeting_minutes.md`)
+
+*Inventory / recipe* — `pantry_lowest_stock`, `recipe_missing_ingredient` (over `pantry.csv` + `recipe.md`)
+
+*Travel planning* — `travel_nyc_boston_distance`, `travel_route_total` (over `distances.csv`)
+
+*Email triage* — `inbox_urgent_count`, `inbox_outage_sender` (over `inbox.md`)
 
 The workspace fixtures include:
 
@@ -127,11 +162,29 @@ Run selected task ids:
 python -m app.tasks.runner --tasks focus_long_log_check focus_csv_highest_value
 ```
 
+Run across multiple Ollama models (cross-model comparison):
+
+```bash
+python -m app.tasks.runner --models llama3.1,qwen2.5-coder,mistral
+```
+
+You can also set `OLLAMA_MODELS=llama3.1,qwen2.5-coder` in `.env` to make it the default. When more than one model is selected, an extra per-model × agent aggregate table is printed and `runs/latest-summary.json` includes an `aggregates_by_model` section.
+
 Disable transcript streaming:
 
 ```bash
 python -m app.tasks.runner --no-transcript
 ```
+
+## Report
+
+After a multi-model run completes, generate charts and a findings scaffold:
+
+```bash
+python -m app.tasks.report
+```
+
+Writes PNG charts to `runs/charts/` and a `FINDINGS.md` at the repo root with auto-derived headline observations (e.g. which agent won on tokens/success per model). Open `FINDINGS.md` in any markdown viewer to see charts inline.
 
 ## Output
 

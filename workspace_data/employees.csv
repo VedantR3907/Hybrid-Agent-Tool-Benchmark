@@ -1,0 +1,11 @@
+employee_id,name,manager_id
+1,Sarah CEO,
+2,Mark VP Eng,1
+3,Lisa VP Sales,1
+4,Tom Eng Mgr,2
+5,Jen Eng Mgr,2
+6,Raj Engineer,4
+7,Mei Engineer,4
+8,Ben Engineer,5
+9,Pat Sales Rep,3
+10,Quinn Sales Rep,3

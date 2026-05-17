@@ -1,0 +1,11 @@
+ticket_id,customer,opened_at,status,priority,category
+T001,Alice,2026-03-01,closed,low,billing
+T002,Bob,2026-03-02,open,high,bug
+T003,Alice,2026-03-03,open,medium,question
+T004,Carol,2026-03-04,closed,low,billing
+T005,Bob,2026-03-05,open,high,bug
+T006,Derek,2026-03-06,closed,medium,feature_request
+T007,Alice,2026-03-07,open,low,question
+T008,Bob,2026-03-08,closed,high,bug
+T009,Eva,2026-03-09,open,medium,bug
+T010,Alice,2026-03-10,closed,low,billing

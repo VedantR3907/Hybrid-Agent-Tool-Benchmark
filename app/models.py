@@ -64,6 +64,7 @@ class BenchmarkTask:
     validator: Callable[[str], tuple[bool, str]]
     notes: str = ""
     suite: str = "hybrid"
+    difficulty: str = "medium"
 
 
 @dataclass
@@ -83,4 +84,5 @@ class AgentRunResult:
     error_reason: str | None = None
     log_path: str | None = None
     transcript_path: str | None = None
+    difficulty: str = "medium"
 

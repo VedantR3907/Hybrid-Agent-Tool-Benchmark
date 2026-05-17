@@ -103,7 +103,8 @@ class RunLogger:
 
     def finalize(self, payload: dict[str, Any]) -> tuple[Path, Path]:
         finished_at = datetime.now(timezone.utc)
-        stem = f"{self.started_at.strftime('%Y%m%d-%H%M%S')}-{self.task_id}-{self.agent_type}"
+        safe_model = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in self.model_name)
+        stem = f"{self.started_at.strftime('%Y%m%d-%H%M%S')}-{self.task_id}-{self.agent_type}-{safe_model}"
         json_path = self.runs_root / f"{stem}.json"
         transcript_path = self.runs_root / f"{stem}.transcript.md"
         document = {

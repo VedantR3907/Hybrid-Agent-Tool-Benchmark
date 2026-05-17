@@ -1,0 +1,11 @@
+from,to,miles
+NYC,Boston,215
+NYC,Philadelphia,95
+Philadelphia,Washington,140
+Boston,Portland,110
+Washington,Atlanta,640
+Atlanta,Miami,660
+NYC,Chicago,790
+Chicago,Detroit,280
+Detroit,Cleveland,170
+Cleveland,Pittsburgh,135

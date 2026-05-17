@@ -1,0 +1,13 @@
+date,category,vendor,amount
+2026-03-01,groceries,SuperMart,84.50
+2026-03-02,transport,UberX,18.75
+2026-03-03,dining,The Bistro,62.00
+2026-03-05,groceries,SuperMart,55.20
+2026-03-07,utilities,PowerCo,142.30
+2026-03-10,dining,Pizza Place,28.00
+2026-03-12,transport,UberX,22.40
+2026-03-15,groceries,FarmFresh,73.10
+2026-03-18,subscriptions,StreamCo,15.99
+2026-03-20,dining,The Bistro,55.50
+2026-03-22,transport,Taxi,31.00
+2026-03-25,utilities,WaterCorp,48.00

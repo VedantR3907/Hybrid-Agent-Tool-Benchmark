@@ -1,0 +1,8 @@
+date,start,end,attendees,title
+2026-03-01,09:00,10:00,"alice,bob",Standup
+2026-03-01,10:00,11:00,"alice,carol",Design Review
+2026-03-01,14:00,15:00,"bob,derek",1:1
+2026-03-02,09:00,10:00,"alice,bob",Standup
+2026-03-02,11:00,12:30,"alice,carol,bob",Planning
+2026-03-02,12:00,13:00,"alice,eva",Lunch Sync
+2026-03-03,09:00,10:00,"alice,bob",Standup

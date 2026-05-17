@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,17 @@ _SIMPLE_FILE_READ_RE = re.compile(
     r'^\s*(?:cat|type|Get-Content)\s+(?:-LiteralPath\s+|-Path\s+)?[\"\']?(?P<path>[^\"\'|;]+?)[\"\']?\s*$',
     re.IGNORECASE,
 )
+
+_PWSH_WRAPPER_RE = re.compile(
+    r'^\s*(?:powershell|pwsh)(?:\.exe)?\s+'
+    r'(?:-(?:NoProfile|NoLogo|NonInteractive|ExecutionPolicy\s+\S+)\s+)*'
+    r'-(?:Command|c)\b',
+    re.IGNORECASE,
+)
+
+
+def _is_pwsh_wrapper(command: str) -> bool:
+    return bool(_PWSH_WRAPPER_RE.match(command))
 
 
 @dataclass
@@ -32,54 +44,79 @@ class WorkspaceCommandRunner:
         self.reader = RangedFileReader(workspace, char_limit=char_limit, line_limit=line_limit)
 
     def run(self, command: str) -> CommandRunPayload:
+        if _is_pwsh_wrapper(command):
+            return CommandRunPayload(
+                {
+                    "command": command,
+                    "stdout": "",
+                    "stderr": (
+                        "Invalid command: do not wrap your command in 'powershell -Command \"...\"' or 'pwsh -c ...'. "
+                        "Your command is already executed inside PowerShell. Write the PowerShell command directly, e.g. "
+                        "Import-Csv 'foo.csv' | Where-Object {...} | Select-Object -First 1"
+                    ),
+                    "exit_code": 2,
+                    "duration_ms": 0,
+                    "truncated": False,
+                }
+            )
         intercepted = self._intercept_simple_file_read(command)
         if intercepted is not None:
             return intercepted
 
         started = time.perf_counter()
+        popen_kwargs: dict[str, Any] = {}
+        if sys.platform == "win32":
+            popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+        process = subprocess.Popen(
+            ["powershell.exe", "-NoProfile", "-Command", command],
+            cwd=str(self.workspace.root),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            **popen_kwargs,
+        )
+        timed_out = False
         try:
-            completed = subprocess.run(
-                ["powershell.exe", "-NoProfile", "-Command", command],
-                cwd=str(self.workspace.root),
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=self.timeout_seconds,
-            )
-            duration_ms = int((time.perf_counter() - started) * 1000)
-            stdout_payload, artifact_path, truncated = self._truncate_stdout(completed.stdout)
-            payload = {
-                "command": command,
-                "stdout": stdout_payload,
-                "stderr": completed.stderr,
-                "exit_code": completed.returncode,
-                "duration_ms": duration_ms,
-                "truncated": truncated,
-            }
-            if artifact_path:
-                payload["overflow_path"] = artifact_path
+            stdout_text, stderr_text = process.communicate(timeout=self.timeout_seconds)
+            return_code = process.returncode
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            if sys.platform == "win32":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+                    capture_output=True,
+                    check=False,
+                )
+            else:
+                process.kill()
+            try:
+                stdout_text, stderr_text = process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                stdout_text, stderr_text = "", ""
+            return_code = 124
+
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        stdout_payload, artifact_path, truncated = self._truncate_stdout(stdout_text or "")
+        payload: dict[str, Any] = {
+            "command": command,
+            "stdout": stdout_payload,
+            "stderr": "command timed out" if timed_out else (stderr_text or ""),
+            "exit_code": return_code,
+            "duration_ms": duration_ms,
+            "truncated": truncated,
+        }
+        if timed_out:
+            payload["message"] = f"Command exceeded timeout of {self.timeout_seconds} seconds."
+        if artifact_path:
+            payload["overflow_path"] = artifact_path
+            if not timed_out:
                 payload["message"] = (
                     f"Output truncated. Full output saved to {artifact_path}. "
                     "Refine the command or inspect the saved file with narrower commands."
                 )
-            return CommandRunPayload(payload, artifact_path=artifact_path)
-        except subprocess.TimeoutExpired as exc:
-            duration_ms = int((time.perf_counter() - started) * 1000)
-            stdout_payload, artifact_path, truncated = self._truncate_stdout((exc.stdout or "") if isinstance(exc.stdout, str) else "")
-            return CommandRunPayload(
-                {
-                    "command": command,
-                    "stdout": stdout_payload,
-                    "stderr": "command timed out",
-                    "exit_code": 124,
-                    "duration_ms": duration_ms,
-                    "truncated": truncated,
-                    "message": f"Command exceeded timeout of {self.timeout_seconds} seconds.",
-                    **({"overflow_path": artifact_path} if artifact_path else {}),
-                },
-                artifact_path=artifact_path,
-            )
+        return CommandRunPayload(payload, artifact_path=artifact_path)
 
     def _intercept_simple_file_read(self, command: str) -> CommandRunPayload | None:
         match = _SIMPLE_FILE_READ_RE.match(command)

@@ -57,6 +57,7 @@ class BaseAgent(ABC):
             response, request_payload, raw_response = self.client.chat(
                 messages=messages,
                 tools=[tool.to_ollama_schema() for tool in self.tools],
+                model=self.config.ollama_model,
             )
             llm_turns += 1
             logger.log_event("llm_request", turn=turn, request=request_payload)
@@ -132,6 +133,7 @@ class BaseAgent(ABC):
             task_id=task.task_id,
             agent_type=self.agent_type,
             model_name=self.config.ollama_model,
+            difficulty=task.difficulty,
             success=success,
             validation_notes=validation_notes,
             final_answer=final_answer,

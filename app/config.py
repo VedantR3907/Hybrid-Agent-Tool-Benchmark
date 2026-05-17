@@ -11,6 +11,7 @@ class BenchmarkConfig(BaseModel):
     ollama_api_key: str | None = Field(default=None)
     ollama_base_url: str = Field(default="https://ollama.com/api")
     ollama_model: str = Field(default="glm-5:cloud")
+    ollama_models: list[str] = Field(default_factory=list)
     ollama_temperature: float = Field(default=0.0)
     ollama_max_tokens: int = Field(default=2048)
     ollama_timeout_seconds: float = Field(default=60.0)
@@ -26,10 +27,13 @@ class BenchmarkConfig(BaseModel):
     def load(cls) -> "BenchmarkConfig":
         project_root = Path(__file__).resolve().parents[1]
         load_dotenv(project_root / ".env")
+        models_raw = os.getenv("OLLAMA_MODELS", "")
+        models = [m.strip() for m in models_raw.split(",") if m.strip()]
         return cls(
             ollama_api_key=os.getenv("OLLAMA_API_KEY"),
             ollama_base_url=os.getenv("OLLAMA_BASE_URL", "https://ollama.com/api"),
             ollama_model=os.getenv("OLLAMA_MODEL", "glm-5:cloud"),
+            ollama_models=models,
             ollama_temperature=float(os.getenv("OLLAMA_TEMPERATURE", "0")),
             ollama_max_tokens=int(os.getenv("OLLAMA_MAX_TOKENS", "2048")),
             ollama_timeout_seconds=float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "60")),

@@ -18,7 +18,15 @@ workspace_data/sqlite/superuser.sqlite
 
 # Agent test artifacts (leftover from CLI agent PDF extraction runs)
 workspace_data/page_*.txt
-workspace_data/temp_pdf*.txt
+workspace_data/temp_*.txt
+workspace_data/chapter*.txt
+workspace_data/st_mungos.txt
+workspace_data/stmungo_pages.txt
+workspace_data/neville_*.txt
+workspace_data/firenze.txt
+workspace_data/hagrid_tale.txt
+workspace_data/hearing.txt
+workspace_data/christmas_ward.txt
 
 # Local scratch / contains API keys
 test_api.py

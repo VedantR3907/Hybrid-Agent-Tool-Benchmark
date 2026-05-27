@@ -953,12 +953,23 @@ def get_tasks() -> list[BenchmarkTask]:
             prompt=(
                 "Read pdfs/harry_potter_5.pdf — this is the full novel 'Harry Potter and the Order of the Phoenix' (~891 pages). "
                 "Answer all five questions below. Each answer must cover EVERY sub-part of its question. "
-                "Format each answer as 'Q<n>: <full answer paragraph>'.\n\n"
+                "Format each answer as 'Q<n>: <full answer paragraph>'.\n"
+                "Each question lists chapter hints and keyword hints — use search_pdf (or grep-like commands for CLI) on those keywords first to locate the relevant pages, then read_pdf the narrow page range.\n\n"
                 "Q1: In the opening Privet Drive incident, identify the complete chain of failure that leads to Harry's Ministry trouble: who was supposed to be watching him, why that person left, who warned Mrs. Figg, what Harry did, and why the Ministry could punish him so quickly.\n"
+                "    Chapter hints: Chapter 1 'Dudley Demented' and Chapter 2 'A Peck of Owls'.\n"
+                "    Keyword hints: Dementors, Dudley, Mrs. Figg, Mundungus Fletcher, Mr. Tibbies, Patronus, Reasonable Restriction of Underage Sorcery, Ministry, expulsion.\n\n"
                 "Q2: During the St. Mungo's visit, what hidden personal history about Neville is revealed, who reveals it, what exactly happened to his parents, and what small object does his mother give him that shows the tragedy without needing explanation?\n"
+                "    Chapter hint: Chapter 23 'Christmas on the Closed Ward'.\n"
+                "    Keyword hints: Neville, Mrs. Longbottom, Frank, Alice, Aurors, tortured into insanity, Droobles Blowing Gum wrapper, closed ward.\n\n"
                 "Q3: Connect Firenze's classroom warning to the later forest subplot: what does Firenze warn Harry to tell Hagrid, why can't Firenze warn Hagrid himself, and what is the 'attempt' actually about?\n"
+                "    Chapter hints: Chapter 27 'The Centaur and the Sneak' and Chapter 30 'Grawp'.\n"
+                "    Keyword hints: Firenze, Hagrid, attempt is not working, abandon it, banished, forest, Grawp, giant, brother.\n\n"
                 "Q4: The D.A. is exposed through a betrayal that is foreshadowed earlier. Who is the betrayer, what earlier detail makes that betrayal plausible, and what magical consequence marks the betrayal?\n"
-                "Q5: At the end, Dumbledore explains why the prophecy applies to Harry rather than Neville. Give the full reasoning: what part of the prophecy could have fit both boys, what final condition made Harry the chosen one, what did Voldemort fail to hear, and what 'power' does Dumbledore say Voldemort does not understand?"
+                "    Chapter hints: Chapter 16 'In the Hog's Head', Chapter 18 'Dumbledore's Army', and Chapter 27 'The Centaur and the Sneak'.\n"
+                "    Keyword hints: Marietta, Cho, Edgecombe, mother works for the Ministry, Dumbledore's Army, Room of Requirement, SNEAK, betrayed, Umbridge.\n\n"
+                "Q5: At the end, Dumbledore explains why the prophecy applies to Harry rather than Neville. Give the full reasoning: what part of the prophecy could have fit both boys, what final condition made Harry the chosen one, what did Voldemort fail to hear, and what 'power' does Dumbledore say Voldemort does not understand?\n"
+                "    Chapter hint: Chapter 37 'The Lost Prophecy'.\n"
+                "    Keyword hints: prophecy, Neville Longbottom, born at the end of July, defied Voldemort three times, mark him as his equal, scar, half-blood, power the Dark Lord knows not, love."
             ),
             validator=validate_pdf_harry_potter,
             notes="891-page novel. Scored by LLM judge against gold answers. Threshold: 3/5 sub-questions must pass.",

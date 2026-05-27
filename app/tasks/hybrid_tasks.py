@@ -4,7 +4,7 @@ import csv
 from pathlib import Path
 
 from app.models import BenchmarkTask
-from app.tasks.evaluator import contains_all, normalize
+from app.tasks.evaluator import contains_all, contains_partial, normalize
 
 
 SUITE_NAME = "hybrid"
@@ -288,6 +288,112 @@ def validate_inbox_outage_sender(answer: str) -> tuple[bool, str]:
     if "client@acme.com" not in normalized and "acme.com" not in normalized:
         return False, "expected client@acme.com as the sender about production outage"
     return True, "correct sender identified"
+
+
+# ---------- New tasks: auth log, jobs, requests, application log, code reasoning ----------
+
+def validate_auth_most_failed_user(answer: str) -> tuple[bool, str]:
+    normalized = normalize(answer)
+    if "bob" not in normalized:
+        return False, "expected bob as the user with most FAILED_LOGIN events"
+    if "2" not in normalized and "two" not in normalized:
+        return False, "expected bob to have 2 failed logins"
+    return True, "correct user and count"
+
+
+def validate_jobs_retry_queue_count(answer: str) -> tuple[bool, str]:
+    normalized = normalize(answer)
+    if "3" in normalized or "three" in normalized:
+        return True, "correct retry queue job count"
+    return False, "expected 3 jobs with queue=retry"
+
+
+def validate_requests_slowest_endpoint(answer: str) -> tuple[bool, str]:
+    normalized = normalize(answer)
+    if "reports/export" not in normalized and "/api/reports/export" not in normalized:
+        return False, "expected /api/reports/export as the slowest endpoint"
+    if "910" not in normalized:
+        return False, "expected latency of 910ms"
+    return True, "correct slowest endpoint and latency"
+
+
+def validate_application_log_top_warn(answer: str) -> tuple[bool, str]:
+    normalized = normalize(answer)
+    if "w204" not in normalized:
+        return False, "expected W204 as the most frequent warning code"
+    if "5" not in normalized and "five" not in normalized:
+        return False, "expected W204 to appear 5 times"
+    return True, "correct top warning code and count"
+
+
+def validate_code_retry_delay_cap(answer: str) -> tuple[bool, str]:
+    normalized = normalize(answer)
+    if "30" not in normalized and "thirty" not in normalized:
+        return False, "expected maximum return value of 30 from calculate_retry_delay"
+    return True, "correct maximum return value"
+
+
+def validate_code_order_threshold(answer: str) -> tuple[bool, str]:
+    normalized = normalize(answer)
+    if "1000" not in normalized and "1,000" not in normalized:
+        return False, "expected threshold of 1000 for manual_review in process_order"
+    return True, "correct approval threshold"
+
+
+# ---------- PDF task validators ----------
+
+def validate_pdf_apple_financials(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["95,359", "61,110", "8,550", "331,233", "Americas"])
+
+
+def validate_pdf_research_paper(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, [
+        "Sahil Kale",
+        "sahilrkale05@gmail.com",
+        "22-04-2024",
+        "Pune Institute of Computer Technology",
+        "T5",
+    ])
+
+
+def validate_pdf_llm_interview(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["AIxFunda", "Kalyan", "tokenization", "50", "quadratic"])
+
+
+def validate_pdf_multi_ai(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, [
+        "Sahil Kale", "Gautam Khaire", "Jay Patankar",
+        "Kalyan",
+        "22-04-2024",
+        "self-attention",
+        "T5",
+    ])
+
+
+def validate_pdf_recruitment(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["55.4", "468", "FER", "45", "happiness"])
+
+
+# ---------- SQLite task validators ----------
+
+def validate_sql_chinook_top_genre(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["Rock", "1297"], threshold=1.0)
+
+
+def validate_sql_sakila_top_film(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["BUCKET BROTHERHOOD", "34"], threshold=1.0)
+
+
+def validate_sql_sakila_top_customer(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["KARL SEAL", "221.55"], threshold=1.0)
+
+
+def validate_sql_superuser_cooccurring_tag(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["windows", "7153"], threshold=1.0)
+
+
+def validate_sql_superuser_body_search(answer: str) -> tuple[bool, str]:
+    return contains_partial(answer, ["1116"], threshold=1.0)
 
 
 def get_tasks() -> list[BenchmarkTask]:
@@ -638,6 +744,76 @@ def get_tasks() -> list[BenchmarkTask]:
             suite=SUITE_NAME,
             difficulty="medium",
         ),
+        # ---- Auth / jobs / requests / application log / code reasoning ----
+        BenchmarkTask(
+            task_id="auth_most_failed_user",
+            prompt=(
+                "Read auth.log. Count FAILED_LOGIN events per user and identify the user with the most failures. "
+                "Answer in two lines: 'User: <name>' and 'Count: <integer>'."
+            ),
+            validator=validate_auth_most_failed_user,
+            notes="bob has 2 FAILED_LOGIN events (most); others have 1.",
+            suite=SUITE_NAME,
+            difficulty="medium",
+        ),
+        BenchmarkTask(
+            task_id="jobs_retry_queue_count",
+            prompt=(
+                "Read jobs.csv. Count how many jobs have queue equal to 'retry'. "
+                "Answer with exactly one line: 'Count: <integer>'."
+            ),
+            validator=validate_jobs_retry_queue_count,
+            notes="3 jobs with queue=retry: J102, J104, J107.",
+            suite=SUITE_NAME,
+            difficulty="easy",
+        ),
+        BenchmarkTask(
+            task_id="requests_slowest_endpoint",
+            prompt=(
+                "Read requests.log. Find the endpoint path with the highest latency_ms value. "
+                "Answer in two lines: 'Endpoint: <path>' and 'Latency: <integer>ms'."
+            ),
+            validator=validate_requests_slowest_endpoint,
+            notes="/api/reports/export has the highest latency at 910ms.",
+            suite=SUITE_NAME,
+            difficulty="medium",
+        ),
+        BenchmarkTask(
+            task_id="application_log_top_warn_code",
+            prompt=(
+                "Read application.log. Count how many times each WARN code appears (e.g. W204, W301, W110). "
+                "Identify the most frequent code and its count. "
+                "Answer in two lines: 'Code: <code>' and 'Count: <integer>'."
+            ),
+            validator=validate_application_log_top_warn,
+            notes="W204 appears 5 times (most frequent).",
+            suite=SUITE_NAME,
+            difficulty="medium",
+        ),
+        BenchmarkTask(
+            task_id="code_retry_delay_cap",
+            prompt=(
+                "Read src/utils.py. The function calculate_retry_delay returns a capped value. "
+                "What is the maximum value this function can ever return, regardless of the input? "
+                "Answer with exactly one line: 'Max: <integer>'."
+            ),
+            validator=validate_code_retry_delay_cap,
+            notes="calculate_retry_delay uses min(retries * 5, 30), so max return is 30.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        BenchmarkTask(
+            task_id="code_order_status_threshold",
+            prompt=(
+                "Read src/utils.py. The function process_order assigns a status based on the order amount. "
+                "What is the minimum amount value that triggers the 'manual_review' status? "
+                "Answer with exactly one line: 'Threshold: <integer>'."
+            ),
+            validator=validate_code_order_threshold,
+            notes="process_order uses amount < 1000 for approved, so 1000 triggers manual_review.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
         # ---- Email triage ----
         BenchmarkTask(
             task_id="inbox_urgent_count",
@@ -660,5 +836,153 @@ def get_tasks() -> list[BenchmarkTask]:
             notes="client@acme.com sent the outage emails.",
             suite=SUITE_NAME,
             difficulty="medium",
+        ),
+        # ---- PDF: single-document Q&A ----
+        BenchmarkTask(
+            task_id="pdf_apple_financials",
+            prompt=(
+                "Read pdfs/apple_statement.pdf and answer all five questions. "
+                "Format each answer as 'Q<n>: <answer>'.\n"
+                "Q1: What were Apple's total net sales for the three months ended March 29, 2025 (in millions)?\n"
+                "Q2: What was Apple's net income for the six months ended March 29, 2025 (in millions)?\n"
+                "Q3: What were Apple's research and development expenses for the three months ended March 29, 2025 (in millions)?\n"
+                "Q4: What was Apple's total assets as of March 29, 2025 (in millions)?\n"
+                "Q5: Which geographic segment had the highest net sales for the three months ended March 29, 2025?"
+            ),
+            validator=validate_pdf_apple_financials,
+            notes="Answers: 95359, 61110, 8550, 331233, Americas.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        BenchmarkTask(
+            task_id="pdf_research_paper_qa",
+            prompt=(
+                "Read pdfs/research_paper.pdf and answer all five questions. "
+                "Format each answer as 'Q<n>: <answer>'.\n"
+                "Q1: Who is the corresponding author of the paper?\n"
+                "Q2: What is the corresponding author's email address?\n"
+                "Q3: What date was the paper accepted?\n"
+                "Q4: What institution are the authors affiliated with?\n"
+                "Q5: What base model does the paper select for the FAQ generation system?"
+            ),
+            validator=validate_pdf_research_paper,
+            notes="Answers: Sahil Kale, sahilrkale05@gmail.com, 22-04-2024, Pune Institute of Computer Technology, T5.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        BenchmarkTask(
+            task_id="pdf_llm_interview_qa",
+            prompt=(
+                "Read pdfs/llm_interview.pdf and answer all five questions. "
+                "Format each answer as 'Q<n>: <answer>'.\n"
+                "Q1: What newsletter is this document published under?\n"
+                "Q2: Who is the author of this document?\n"
+                "Q3: What are the four steps of running an inference query on an LLM (from Q2 in the document)?\n"
+                "Q4: By how much does quantization reduce the memory footprint of an LLM (expressed as a percentage range)?\n"
+                "Q5: What is the computational complexity of self-attention in the Transformer model with respect to sequence length?"
+            ),
+            validator=validate_pdf_llm_interview,
+            notes="Answers: AIxFunda Newsletter, Kalyan KS, Tokenization/Prefill/Decoding/Detokenization, 50-75%, quadratic O(n^2).",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        # ---- PDF: multi-document Q&A ----
+        BenchmarkTask(
+            task_id="pdf_multi_ai_docs",
+            prompt=(
+                "You have two PDFs: pdfs/research_paper.pdf (FAQ-Gen paper) and pdfs/llm_interview.pdf (LLM interview Q&A). "
+                "Answer all five questions, each requiring you to read the correct PDF. "
+                "Format each answer as 'Q<n>: <answer>'.\n"
+                "Q1: Who are the three authors of the FAQ-Gen paper? (research_paper.pdf)\n"
+                "Q2: Who authored the LLM interview document? (llm_interview.pdf)\n"
+                "Q3: What date was the FAQ-Gen paper accepted? (research_paper.pdf)\n"
+                "Q4: What Transformer mechanism requires positional embeddings because it processes tokens in parallel without any notion of sequence order? (llm_interview.pdf)\n"
+                "Q5: What base model does the FAQ-Gen paper select for its system in section 2.2? (research_paper.pdf)"
+            ),
+            validator=validate_pdf_multi_ai,
+            notes="Answers span both PDFs: authors (Kale/Khaire/Patankar), Kalyan KS, 22-04-2024, self-attention, T5.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        BenchmarkTask(
+            task_id="pdf_recruitment_qa",
+            prompt=(
+                "Read pdfs/recruitment_analysis.pdf and answer all five questions. "
+                "Format each answer as 'Q<n>: <answer>'.\n"
+                "Q1: What accuracy (%) did DeepFace achieve on the FER-2013 dataset?\n"
+                "Q2: How many facial landmarks does MediaPipe's Face Mesh solution detect?\n"
+                "Q3: What library is currently used in the scoring algorithm to detect faces and classify emotions into seven categories?\n"
+                "Q4: What accuracy (%) did the Custom-Facial-Emotion Detection model achieve on the testing dataset?\n"
+                "Q5: What is the sole positive emotion category used in the FER library's emotion classification?"
+            ),
+            validator=validate_pdf_recruitment,
+            notes="Answers: 55.4%, 468, FER library, 45%, Happiness.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        # ---- SQLite tasks ----
+        BenchmarkTask(
+            task_id="sql_chinook_top_genre",
+            prompt=(
+                "Query sqlite/chinook.sqlite to find the music genre with the most tracks. "
+                "Answer in one line: 'Genre: <name>, Tracks: <count>'."
+            ),
+            validator=validate_sql_chinook_top_genre,
+            notes="Genre is Rock with 1297 tracks. Join Genre with Track on GenreId.",
+            suite=SUITE_NAME,
+            difficulty="easy",
+        ),
+        BenchmarkTask(
+            task_id="sql_sakila_top_film",
+            prompt=(
+                "Query sqlite/sakila.sqlite to find the film that has been rented the most times. "
+                "Answer in one line: 'Film: <title>, Rentals: <count>'. "
+                "Note: rentals join through inventory."
+            ),
+            validator=validate_sql_sakila_top_film,
+            notes="BUCKET BROTHERHOOD with 34 rentals. Join film -> inventory -> rental.",
+            suite=SUITE_NAME,
+            difficulty="medium",
+        ),
+        BenchmarkTask(
+            task_id="sql_sakila_top_customer",
+            prompt=(
+                "Query sqlite/sakila.sqlite to find the customer who has paid the highest total amount. "
+                "Answer in one line: 'Customer: <first_name> <last_name>, Total: <amount>'. "
+                "Use the payment table; round total to 2 decimal places."
+            ),
+            validator=validate_sql_sakila_top_customer,
+            notes="KARL SEAL with 221.55 total payments.",
+            suite=SUITE_NAME,
+            difficulty="medium",
+        ),
+        BenchmarkTask(
+            task_id="sql_superuser_cooccurring_tag",
+            prompt=(
+                "Query sqlite/superuser.sqlite — this is a large Stack Exchange data dump (~2.7 GB, millions of rows). "
+                "Among questions (PostTypeId=1) tagged with 'windows-10', which OTHER tag appears most often alongside it? "
+                "Note: the posts.Tags column stores tags as '|tag1|tag2|tag3|' (pipe-delimited). "
+                "You must parse that column — the precomputed tags table does not give you co-occurrence. "
+                "Exclude 'windows-10' itself from the result. "
+                "Answer in one line: 'Tag: <name>, Count: <n>'."
+            ),
+            validator=validate_sql_superuser_cooccurring_tag,
+            notes="'windows' co-occurs 7153 times with 'windows-10'.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        BenchmarkTask(
+            task_id="sql_superuser_body_search",
+            prompt=(
+                "Query sqlite/superuser.sqlite to count how many ANSWER posts (PostTypeId=2) contain the literal phrase "
+                "'sfc /scannow' anywhere in their Body column. "
+                "Body holds raw HTML and there are ~1.2 million posts — DO NOT SELECT * or return Body contents. "
+                "Use COUNT(*) with a LIKE filter. "
+                "Answer in one line: 'Count: <n>'."
+            ),
+            validator=validate_sql_superuser_body_search,
+            notes="1116 answers contain 'sfc /scannow'. Forces a full LIKE scan of the Body column.",
+            suite=SUITE_NAME,
+            difficulty="hard",
         ),
     ]

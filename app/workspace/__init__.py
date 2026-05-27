@@ -29,6 +29,9 @@ BINARY_EXTENSIONS = {
     ".ico",
     ".pdf",
     ".zip",
+    ".sqlite",
+    ".db",
+    ".sqlite3",
 }
 
 CSV_PREVIEW_ROWS = 20

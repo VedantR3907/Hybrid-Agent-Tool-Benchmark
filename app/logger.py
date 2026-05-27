@@ -55,7 +55,7 @@ class RunLogger:
         self.transcript_lines.extend(block)
         if self.console and self.stream_transcript:
             self.console.print(f"[bold]{heading}[/bold]")
-            self.console.print(content.rstrip())
+            self.console.print(content.rstrip(), markup=False)
             self.console.print()
 
     def log_event(self, event_type: str, **data: Any) -> None:

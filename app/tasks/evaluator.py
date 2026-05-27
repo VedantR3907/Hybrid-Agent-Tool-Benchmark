@@ -22,6 +22,18 @@ def contains_all(text: str, expected: Iterable[str]) -> tuple[bool, str]:
 
 
 
+def contains_partial(text: str, expected: Iterable[str], threshold: float = 0.8) -> tuple[bool, str]:
+    items = list(expected)
+    normalized = normalize(text)
+    missing = [item for item in items if normalize(item) not in normalized]
+    matched = len(items) - len(missing)
+    ratio = matched / len(items) if items else 1.0
+    note = f"{matched}/{len(items)} correct"
+    if missing:
+        note += f"; missing: {', '.join(missing)}"
+    return ratio >= threshold, note
+
+
 def contains_any(text: str, expected: Iterable[str]) -> bool:
     normalized = normalize(text)
     return any(normalize(item) in normalized for item in expected)

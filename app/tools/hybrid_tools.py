@@ -7,6 +7,8 @@ from app.config import BenchmarkConfig
 from app.models import ToolExecutionResult, ToolSpec
 from app.runtime.command_runner import WorkspaceCommandRunner
 from app.runtime.file_reader import RangedFileReader
+from app.tools.pdf_tools import PdfToolSuite
+from app.tools.sql_tools import SqlToolSuite
 from app.workspace import WorkspaceError, WorkspaceManager
 
 
@@ -21,6 +23,8 @@ class HybridFunctionToolSuite:
             line_limit=config.output_line_limit,
             timeout_seconds=config.command_timeout_seconds,
         )
+        self.pdf = PdfToolSuite(workspace, char_limit=config.output_char_limit)
+        self.sql = SqlToolSuite(workspace, row_limit=100, char_limit=config.output_char_limit)
 
     def build_tools(self) -> list[ToolSpec]:
         return [
@@ -63,6 +67,46 @@ class HybridFunctionToolSuite:
                     "required": ["command"],
                 },
                 handler=lambda args: self._run_command(args["command"]),
+            ),
+            ToolSpec(
+                name="read_pdf",
+                description="Extract text from specific pages of a PDF file in the workspace. Use pages='1-5' for a range or pages='3' for a single page. PDF files are in pdfs/.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Workspace-relative path, e.g. pdfs/apple_statement.pdf"},
+                        "pages": {"type": "string", "description": "Page range like '1-5' or single page like '3'. Defaults to '1-5'."},
+                    },
+                    "required": ["path"],
+                },
+                handler=lambda args: self.pdf.read_pdf(args),
+            ),
+            ToolSpec(
+                name="search_pdf",
+                description="Search for a keyword across all pages of a PDF file. Returns matching page numbers and surrounding snippets.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Workspace-relative path, e.g. pdfs/research_paper.pdf"},
+                        "keyword": {"type": "string", "description": "The exact keyword or phrase to search for."},
+                        "context_chars": {"type": "integer", "description": "Characters of context around each match (default 200)."},
+                    },
+                    "required": ["path", "keyword"],
+                },
+                handler=lambda args: self.pdf.search_pdf(args),
+            ),
+            ToolSpec(
+                name="query_sql",
+                description="Run a read-only SQL query against a SQLite database in the workspace. Returns rows as JSON. Only SELECT/WITH/PRAGMA/EXPLAIN allowed. Row limit 100. SQLite DBs live in sqlite/.",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "path": {"type": "string", "description": "Workspace-relative path, e.g. sqlite/chinook.sqlite"},
+                        "sql": {"type": "string", "description": "Read-only SQL query."},
+                    },
+                    "required": ["path", "sql"],
+                },
+                handler=lambda args: self.sql.query_sql(args),
             ),
         ]
 
@@ -117,7 +161,7 @@ class HybridCliToolSuite:
                     "required": ["command"],
                 },
                 handler=lambda args: self._run_command(args["command"]),
-            )
+            ),
         ]
 
     def _run_command(self, command: str) -> ToolExecutionResult:

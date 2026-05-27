@@ -44,3 +44,14 @@ def aggregate_by_model_agent(results: Iterable[AgentRunResult]) -> dict[str, dic
         model: {agent: _summarize(items) for agent, items in agents.items()}
         for model, agents in grouped.items()
     }
+
+
+def aggregate_by_difficulty(results: Iterable[AgentRunResult]) -> dict[str, dict[str, dict[str, float]]]:
+    """Returns {difficulty: {agent_type: metrics}}."""
+    grouped: dict[str, dict[str, list[AgentRunResult]]] = {}
+    for result in results:
+        grouped.setdefault(result.difficulty, {}).setdefault(result.agent_type, []).append(result)
+    return {
+        difficulty: {agent: _summarize(items) for agent, items in agents.items()}
+        for difficulty, agents in grouped.items()
+    }

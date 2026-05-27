@@ -13,6 +13,17 @@ venv/
 runs/
 workspace_data/.artifacts/
 
+# Large / generated workspace data (rebuild via scripts/build_superuser_db.py)
+workspace_data/sqlite/superuser.sqlite
+
+# Agent test artifacts (leftover from CLI agent PDF extraction runs)
+workspace_data/page_*.txt
+workspace_data/temp_pdf*.txt
+
+# Local scratch / contains API keys
+test_api.py
+temp.py
+
 # OS/editor
 .DS_Store
 Thumbs.db

@@ -456,6 +456,8 @@ def create_workspace(root: Path, force: bool = False) -> None:
     (root / "src").mkdir(parents=True, exist_ok=True)
     (root / "configs").mkdir(parents=True, exist_ok=True)
     (root / ".artifacts").mkdir(parents=True, exist_ok=True)
+    (root / "pdfs").mkdir(parents=True, exist_ok=True)
+    (root / "sqlite").mkdir(parents=True, exist_ok=True)
 
     files: dict[Path, str] = {
         root / "app.log": APP_LOG,

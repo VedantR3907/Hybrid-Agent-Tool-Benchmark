@@ -7,6 +7,7 @@ from dataclasses import asdict
 from typing import Any
 
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from app.agents.cli_agent import CliAgent
@@ -16,7 +17,7 @@ from app.logger import RunLogger, write_summary
 from app.models import AgentRunResult, BenchmarkTask
 from app.ollama_client import OllamaClient
 from app.tasks.hybrid_tasks import SUITE_NAME, get_tasks
-from app.tasks.runner_helpers import aggregate_by_model_agent, aggregate_metrics
+from app.tasks.runner_helpers import aggregate_by_difficulty, aggregate_by_model_agent, aggregate_metrics
 from app.tools.hybrid_tools import HybridCliToolSuite, HybridFunctionToolSuite
 from app.workspace import WorkspaceManager
 from app.workspace.setup_workspace import create_workspace
@@ -164,6 +165,33 @@ def print_aggregate_table(results: list[AgentRunResult]) -> dict[str, dict[str, 
 
 
 
+DIFFICULTY_ORDER = ["easy", "medium", "hard"]
+
+
+def print_difficulty_table(results: list[AgentRunResult]) -> None:
+    by_difficulty = aggregate_by_difficulty(results)
+    table = Table(title="Success Rate by Difficulty")
+    table.add_column("Difficulty")
+    table.add_column("Agent")
+    table.add_column("Runs")
+    table.add_column("Success Rate")
+    table.add_column("Avg Tool Calls")
+    table.add_column("Avg Tokens")
+    for difficulty in DIFFICULTY_ORDER:
+        if difficulty not in by_difficulty:
+            continue
+        for agent_type, metrics in by_difficulty[difficulty].items():
+            table.add_row(
+                difficulty,
+                agent_type,
+                str(int(metrics["runs"])),
+                f"{metrics['success_rate']:.2%}",
+                f"{metrics['avg_tool_calls']:.2f}",
+                f"{metrics['avg_total_tokens']:.2f}",
+            )
+    console.print(table)
+
+
 def print_model_table(by_model: dict[str, dict[str, dict[str, float]]]) -> None:
     table = Table(title="Per-Model x Agent Aggregates")
     table.add_column("Model")
@@ -213,19 +241,20 @@ def main() -> None:
     for model_name in models:
         config.ollama_model = model_name
         console.rule(f"model: {model_name}")
-        try:
-            for task in tasks:
-                agents = build_agents(client, config, workspace, args.agent)
-                for agent in agents:
-                    logger = RunLogger(
-                        config.runs_root,
-                        task.task_id,
-                        agent.agent_type,
-                        config.ollama_model,
-                        console=console,
-                        stream_transcript=not args.no_transcript,
-                    )
-                    logger.start_task(task.prompt, task.notes)
+        model_had_any_result = False
+        for task in tasks:
+            agents = build_agents(client, config, workspace, args.agent)
+            for agent in agents:
+                logger = RunLogger(
+                    config.runs_root,
+                    task.task_id,
+                    agent.agent_type,
+                    config.ollama_model,
+                    console=console,
+                    stream_transcript=not args.no_transcript,
+                )
+                logger.start_task(task.prompt, task.notes)
+                try:
                     result = agent.run_task(task, logger)
                     json_log_path, transcript_path = logger.finalize(
                         {
@@ -237,16 +266,39 @@ def main() -> None:
                     )
                     result.log_path = str(json_log_path)
                     result.transcript_path = str(transcript_path)
-                    results.append(result)
-        except Exception as exc:
-            reason = f"{type(exc).__name__}: {exc}"
-            console.print(f"[yellow]model {model_name} aborted: {reason}. continuing to next model.[/yellow]")
-            skipped_models.append((model_name, reason))
+                    model_had_any_result = True
+                except Exception as exc:
+                    reason = f"{type(exc).__name__}: {exc}"
+                    console.print(f"[yellow]task {task.task_id}/{agent.agent_type} failed: {escape(reason)}[/yellow]")
+                    result = AgentRunResult(
+                        task_id=task.task_id,
+                        agent_type=agent.agent_type,
+                        model_name=model_name,
+                        difficulty=task.difficulty,
+                        success=False,
+                        validation_notes=reason,
+                        final_answer="",
+                        llm_turns=0,
+                        tool_calls=0,
+                        elapsed_ms=0,
+                        error_reason=reason,
+                    )
+                    # If it's an auth error, no point continuing with this model
+                    if "401" in reason or "403" in reason or "AuthError" in reason:
+                        console.print(f"[yellow]auth failure on model {escape(model_name)}, skipping remaining tasks.[/yellow]")
+                        skipped_models.append((model_name, reason))
+                        results.append(result)
+                        break
+                results.append(result)
+            else:
+                continue
+            break  # auth failure inner break propagates out of task loop
 
     if results:
         print_run_table(results)
         print_comparison_table(results)
         aggregates = print_aggregate_table(results)
+        print_difficulty_table(results)
     else:
         aggregates = {}
         console.print("[red]No results to report (all models failed).[/red]")
@@ -267,7 +319,7 @@ def main() -> None:
     if skipped_models:
         console.print("\n[yellow]Skipped models:[/yellow]")
         for model_name, reason in skipped_models:
-            console.print(f"  - {model_name}: {reason}")
+            console.print(f"  - {escape(model_name)}: {escape(reason)}")
     summary_path = config.runs_root / "latest-summary.json"
     write_summary(summary_path, summary_payload)
     console.print(f"\nSummary written to {summary_path}")
@@ -277,5 +329,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as exc:
-        console.print(f"[red]Benchmark failed:[/red] {exc}")
+        console.print(f"[red]Benchmark failed:[/red] {escape(str(exc))}")
         sys.exit(1)

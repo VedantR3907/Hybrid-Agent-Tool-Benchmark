@@ -4,7 +4,7 @@ import csv
 from pathlib import Path
 
 from app.models import BenchmarkTask
-from app.tasks.evaluator import contains_all, contains_partial, normalize
+from app.tasks.evaluator import contains_all, contains_partial, llm_judge, normalize
 
 
 SUITE_NAME = "hybrid"
@@ -372,6 +372,34 @@ def validate_pdf_multi_ai(answer: str) -> tuple[bool, str]:
 
 def validate_pdf_recruitment(answer: str) -> tuple[bool, str]:
     return contains_partial(answer, ["55.4", "468", "FER", "45", "happiness"])
+
+
+HARRY_POTTER_QA: list[tuple[str, str]] = [
+    (
+        "In the opening Privet Drive incident, identify the complete chain of failure that leads to Harry's Ministry trouble: who was supposed to be watching him, why that person left, who warned Mrs. Figg, what Harry did, and why the Ministry could punish him so quickly.",
+        "Mundungus Fletcher was supposed to be watching Harry, but he left to pursue stolen cauldrons. Mrs. Figg's cat, Mr. Tibbies, warned her. Harry used the Patronus Charm to save himself and Dudley from dementors. The Ministry detected underage magic in a Muggle area and sent Harry a notice for breaching the Reasonable Restriction of Underage Sorcery.",
+    ),
+    (
+        "During the St. Mungo's visit, what hidden personal history about Neville is revealed, who reveals it, what exactly happened to his parents, and what small object does his mother give him that shows the tragedy without needing explanation?",
+        "Neville's grandmother, Mrs. Longbottom, reveals that Neville's parents, Frank and Alice Longbottom, were Aurors who were tortured into insanity by Voldemort's followers. Alice Longbottom gives Neville an empty Droobles Blowing Gum wrapper, which Neville quietly keeps/accepts from her.",
+    ),
+    (
+        "Connect Firenze's classroom warning to the later forest subplot: what does Firenze warn Harry to tell Hagrid, why can't Firenze warn Hagrid himself, and what is the 'attempt' actually about?",
+        "Firenze tells Harry to warn Hagrid that his attempt is not working and that he should abandon it. Firenze cannot go near the forest safely because he has been banished by the other centaurs. The 'attempt' is Hagrid trying to civilize/protect his giant half-brother, Grawp, whom he brought back from the giants.",
+    ),
+    (
+        "The D.A. is exposed through a betrayal that is foreshadowed earlier. Who is the betrayer, what earlier detail makes that betrayal plausible, and what magical consequence marks the betrayal?",
+        "The betrayer is Marietta Edgecombe. Earlier, Cho explains that Marietta does not really want to attend D.A. meetings and that her mother works for the Ministry, making her vulnerable to pressure. Hermione's jinx on the signed D.A. parchment causes the word 'SNEAK' to appear on Marietta's face when she betrays the group.",
+    ),
+    (
+        "At the end, Dumbledore explains why the prophecy applies to Harry rather than Neville. Give the full reasoning: what part of the prophecy could have fit both boys, what final condition made Harry the chosen one, what did Voldemort fail to hear, and what 'power' does Dumbledore say Voldemort does not understand?",
+        "The first part could fit both Harry and Neville because both were born at the end of July to parents who had defied Voldemort three times. The deciding condition is that Voldemort himself would 'mark him as his equal,' which he did by attacking Harry and giving him the scar. Voldemort only heard the beginning of the prophecy, so he did not know that attacking the child would risk transferring power to him. The power Voldemort does not understand is love.",
+    ),
+]
+
+
+def validate_pdf_harry_potter(answer: str) -> tuple[bool, str]:
+    return llm_judge(answer, HARRY_POTTER_QA, threshold=3)
 
 
 # ---------- SQLite task validators ----------
@@ -917,6 +945,23 @@ def get_tasks() -> list[BenchmarkTask]:
             ),
             validator=validate_pdf_recruitment,
             notes="Answers: 55.4%, 468, FER library, 45%, Happiness.",
+            suite=SUITE_NAME,
+            difficulty="hard",
+        ),
+        BenchmarkTask(
+            task_id="pdf_harry_potter_plot",
+            prompt=(
+                "Read pdfs/harry_potter_5.pdf — this is the full novel 'Harry Potter and the Order of the Phoenix' (~891 pages). "
+                "Answer all five questions below. Each answer must cover EVERY sub-part of its question. "
+                "Format each answer as 'Q<n>: <full answer paragraph>'.\n\n"
+                "Q1: In the opening Privet Drive incident, identify the complete chain of failure that leads to Harry's Ministry trouble: who was supposed to be watching him, why that person left, who warned Mrs. Figg, what Harry did, and why the Ministry could punish him so quickly.\n"
+                "Q2: During the St. Mungo's visit, what hidden personal history about Neville is revealed, who reveals it, what exactly happened to his parents, and what small object does his mother give him that shows the tragedy without needing explanation?\n"
+                "Q3: Connect Firenze's classroom warning to the later forest subplot: what does Firenze warn Harry to tell Hagrid, why can't Firenze warn Hagrid himself, and what is the 'attempt' actually about?\n"
+                "Q4: The D.A. is exposed through a betrayal that is foreshadowed earlier. Who is the betrayer, what earlier detail makes that betrayal plausible, and what magical consequence marks the betrayal?\n"
+                "Q5: At the end, Dumbledore explains why the prophecy applies to Harry rather than Neville. Give the full reasoning: what part of the prophecy could have fit both boys, what final condition made Harry the chosen one, what did Voldemort fail to hear, and what 'power' does Dumbledore say Voldemort does not understand?"
+            ),
+            validator=validate_pdf_harry_potter,
+            notes="891-page novel. Scored by LLM judge against gold answers. Threshold: 3/5 sub-questions must pass.",
             suite=SUITE_NAME,
             difficulty="hard",
         ),
